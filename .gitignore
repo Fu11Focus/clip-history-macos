@@ -1,0 +1,11 @@
+# Build artifacts
+*.app/
+ClipHistory
+ClipHistoryPicker
+daemon
+watch_test
+*.o
+*.dSYM/
+
+# macOS
+.DS_Store
