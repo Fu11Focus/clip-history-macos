@@ -37,7 +37,21 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
-codesign --force --deep --sign - "$APP"
+# Підпис: стабільний самопідписаний сертифікат, якщо він є (TCC памʼятає дозвіл),
+# інакше — ad-hoc (macOS перепитуватиме доступ щоразу; див. make-signing-cert.sh).
+CERT_NAME="ClipHistory Self-Signed"
+if security find-identity -v -p codesigning | grep -q "$CERT_NAME"; then
+    SIGN="$CERT_NAME"
+    echo "→ Підписую сертифікатом «$CERT_NAME» (стабільна ідентичність)"
+else
+    SIGN="-"
+    echo "⚠️  Сертифіката «$CERT_NAME» нема — підпис ad-hoc."
+    echo "    Запусти ./make-signing-cert.sh, щоб macOS перестав перепитувати доступ."
+fi
+
+# Спочатку вкладені бінарники зі стабільними ідентифікаторами, потім сам бандл.
+codesign --force --sign "$SIGN" -i com.ek.cliphistory.picker "$MACOS/ClipHistoryPicker"
+codesign --force --sign "$SIGN" --identifier com.ek.cliphistory "$APP"
 
 echo "✅ Готово: $APP"
 echo "   $EXE              — резидентний демон (~3.5 МБ), видно як «ClipHistory»"

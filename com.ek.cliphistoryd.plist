@@ -5,9 +5,13 @@
 <dict>
     <key>Label</key>
     <string>com.ek.cliphistoryd</string>
+    <!-- Через LaunchServices (open), щоб був коректний контекст WindowServer/TCC.
+         -W: open чекає, поки застосунок живий → працює разом із KeepAlive. -->
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/ek/ClipHistory/ClipHistory.app/Contents/MacOS/ClipHistory</string>
+        <string>/usr/bin/open</string>
+        <string>-W</string>
+        <string>/Users/ek/ClipHistory/ClipHistory.app</string>
     </array>
     <key>RunAtLoad</key>
     <true/>

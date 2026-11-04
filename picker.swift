@@ -129,7 +129,12 @@ final class Picker: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTa
         panel.makeFirstResponder(table)
     }
 
-    func windowDidResignKey(_ notification: Notification) { exit(0) }
+    private var confirming = false
+
+    func windowDidResignKey(_ notification: Notification) {
+        if confirming { return }   // підтвердження саме ховає панель — не виходимо передчасно
+        exit(0)
+    }
 
     @objc private func singleClick() {
         if table.clickedRow >= 0 {
@@ -141,13 +146,15 @@ final class Picker: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTa
     private func confirm() {
         let row = table.selectedRow
         guard row >= 0, row < items.count else { return }
+        confirming = true
         let chosen = items[row]
-        panel.orderOut(nil)
 
+        // Спочатку кладемо вибране у буфер, і лише потім ховаємо панель.
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(chosen, forType: .string)
 
+        panel.orderOut(nil)
         prevApp?.activate()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
             PasteHelper.sendCmdV()

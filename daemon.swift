@@ -1,8 +1,9 @@
 // Резидентний демон: стежить за буфером + ловить ⌘⇧V + запускає пікер.
-// БЕЗ AppKit. Доступ до буфера — Carbon Pasteboard Manager.
-import ApplicationServices
+// AppKit потрібен, щоб процес мав зʼєднання з WindowServer — інакше
+// глобальний Carbon-хоткей реєструється, але події до нас не доставляються.
+// Працюємо як .accessory (без іконки в Dock, без меню-бару).
+import Cocoa
 import Carbon
-import Foundation
 
 // MARK: - Шлях до історії (спільний з пікером)
 
@@ -32,33 +33,18 @@ func addToHistory(_ s: String) {
     }
 }
 
-// MARK: - Watcher (Carbon Pasteboard)
+// MARK: - Watcher (NSPasteboard changeCount)
 
-var pb: Pasteboard?
-guard PasteboardCreate(kPasteboardClipboard as CFString, &pb) == noErr, let pb = pb else {
-    FileHandle.standardError.write("pb create failed\n".data(using: .utf8)!); exit(1)
-}
+let generalPB = NSPasteboard.general
+var lastChangeCount = generalPB.changeCount
 
-func currentText() -> String? {
-    var count = 0
-    guard PasteboardGetItemCount(pb, &count) == noErr, count >= 1 else { return nil }
-    for i in 1...count {
-        var itemID: PasteboardItemID? = nil
-        guard PasteboardGetItemIdentifier(pb, i, &itemID) == noErr, let id = itemID else { continue }
-        var data: CFData? = nil
-        if PasteboardCopyItemFlavorData(pb, id, "public.utf8-plain-text" as CFString, &data) == noErr,
-           let cf = data { return String(data: cf as Data, encoding: .utf8) }
-    }
-    return nil
-}
-
-let pollTimer = Timer(timeInterval: 0.5, repeats: true) { _ in
-    let flags = PasteboardSynchronize(pb)
-    if (flags.rawValue & PasteboardSyncFlags.modified.rawValue) != 0 {
-        if let s = currentText() { addToHistory(s) }
+func pollPasteboard() {
+    let cc = generalPB.changeCount
+    if cc != lastChangeCount {
+        lastChangeCount = cc
+        if let s = generalPB.string(forType: .string) { addToHistory(s) }
     }
 }
-RunLoop.current.add(pollTimer, forMode: .common)
 
 // MARK: - Запуск пікера
 
@@ -80,11 +66,27 @@ final class HotKey {
             launchPicker(); return noErr
         }, 1, &spec, nil, nil)
         let id = EventHotKeyID(signature: OSType(0x43484953), id: 1)
-        RegisterEventHotKey(UInt32(kVK_ANSI_V), UInt32(cmdKey | shiftKey),
-                            id, GetApplicationEventTarget(), 0, &ref)
+        let st = RegisterEventHotKey(UInt32(kVK_ANSI_V), UInt32(cmdKey | shiftKey),
+                                     id, GetApplicationEventTarget(), 0, &ref)
+        FileHandle.standardError.write("RegisterEventHotKey status=\(st)\n".data(using: .utf8)!)
     }
 }
-HotKey.shared.install()
 
-FileHandle.standardError.write("daemon up, pid=\(getpid())\n".data(using: .utf8)!)
-CFRunLoopRun()
+// MARK: - App delegate
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    var timer: Timer?
+    func applicationDidFinishLaunching(_ note: Notification) {
+        NSApp.setActivationPolicy(.accessory)
+        HotKey.shared.install()
+        let t = Timer(timeInterval: 0.5, repeats: true) { _ in pollPasteboard() }
+        RunLoop.current.add(t, forMode: .common)
+        timer = t
+        FileHandle.standardError.write("daemon up, pid=\(getpid())\n".data(using: .utf8)!)
+    }
+}
+
+let app = NSApplication.shared
+let delegate = AppDelegate()
+app.delegate = delegate
+app.run()
