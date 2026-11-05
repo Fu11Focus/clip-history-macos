@@ -1,5 +1,15 @@
 # ClipHistory
 
+> **Active version is now the C++ rewrite in [`cpp/`](cpp/README.md).**
+> The resident daemon was rebuilt in C++ **without AppKit** (hotkey via
+> `CGEventTap` instead of a Carbon hotkey), cutting idle private memory from
+> **~7.6 MB → ~2.4 MB** (`phys_footprint`). The C++ daemon is what autostarts
+> (LaunchAgent `com.ek.cliphistorycpp`), keeps its own history at
+> `~/Library/Application Support/ClipHistoryCpp/history.json`, and now needs the
+> **Accessibility** permission (the Swift/Carbon hotkey did not). The Swift
+> sources below remain the original design/reference and are no longer in
+> autostart. See [`cpp/README.md`](cpp/README.md) for the comparison and setup.
+
 A minimal, native (arm64, **no Rosetta**) clipboard history manager for macOS, built for a tiny memory footprint — the resident process uses **~7.5 MB** of private memory (`phys_footprint`) vs ~80 MB for some popular clipboard managers.
 
 > **Note on numbers:** Activity Monitor / `ps` will show the daemon at ~60 MB RSS, but

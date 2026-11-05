@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ek.cliphistorycpp</string>
+    <!-- Через LaunchServices (open), щоб TCC/Accessibility-грант привʼязувався
+         до bundle id com.ek.cliphistorycpp (а не до шляху бінарника).
+         -W: open живе, поки застосунок живий → працює разом із KeepAlive. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/open</string>
+        <string>-W</string>
+        <string>/Users/ek/ClipHistory/cpp/ClipHistoryCpp.app</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+</dict>
+</plist>
